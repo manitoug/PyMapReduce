@@ -46,18 +46,23 @@ def copySplits(filesToDeploy,addressesFile):
         ipSent=list(p.starmap(__copySplit,splitArg))
         return (ipSent)
 
-def __copySlave(slave,address):
+def __copyFile(slave,address):
     yourName="mgardette"
-    try:
-        process= subprocess.run([f'scp {slave} {yourName}@{address.strip()}:/tmp/{yourName}'],encoding="UTF-8",timeout=10,capture_output=True,shell=True)
-        sys.stdout.write(f'Slave sent to {address.strip()}\n')
+    try: 
+        mkdir = subprocess.run([f'ssh {yourName}@{address.strip()} \"mkdir -p /tmp/{yourName}\"'],encoding="UTF-8",timeout=10,capture_output=True,shell=True)
     except:
-        sys.stderr.write(f'Could not send to {process.stderr}\n')
+        return f'{mkdir.stderr}'
+        raise
+    try:
+        process= subprocess.run([f'scp {slave} {yourName}@{address.strip(" ")}:/tmp/{yourName}'],encoding="UTF-8",timeout=10,capture_output=True,shell=True)
+    except:
+        sys.stdout.write(f'Could not send to {process.stderr}\n')
+    sys.stdout.write(f'File sent to {address.strip()}\n')
 
-def copySlaves(file,ips):
-    partSlave=partial(__copySlave,file)
+def copyFiles(file,ips):
+    partFile=partial(__copyFile,file)
     with mp.Pool(5) as p:
-        p.map(partSlave,ips)
+        p.map(partFile,ips)
     return (ips)
 
 '''
