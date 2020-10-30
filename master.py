@@ -26,6 +26,15 @@ def executeShuffle(address):
         sys.stderr.write(f'Erreur {address}: {process.stderr}\n')
             #except
 
+def executeReduce(address):
+    try:
+        process= subprocess.run([f'ssh mgardette@{address} \'/tmp/mgardette/slave.py 2 .\''],encoding="UTF-8",timeout=15,capture_output=True,shell=True)
+        sys.stdout.write(f'{address}: {process.stdout}\n')
+    except:
+        sys.stderr.write(f'Erreur {address}: {process.stderr}\n')
+            #except
+
+
 def main():
     #print(dp.getValidIps('src/available_ips'))
     try:
@@ -33,17 +42,20 @@ def main():
         sys.stdout.write(f'{process.stdout}\n')
     except:
         sys.stderr.write(f'{process.stderr}\n')
+        raise
 
     machines=open('machines','w+')
     ipSent=dp.copySplits(['S0','S1','S2'],'available_ips')
     for ip in ipSent:
         machines.write(f'{ip}\n')
+    machines.close()
     dp.copyFiles('slave.py',ipSent)
     dp.copyFiles('machines',ipSent)
 
     with mp.Pool(5) as p:
         p.map(executeMap,ipSent)
         p.map(executeShuffle,ipSent)
+        p.map(executeReduce,ipSent)
 
 if __name__ == "__main__":
     main()
