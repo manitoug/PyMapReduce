@@ -7,9 +7,11 @@ import sys
 import os
 import multiprocessing as mp
 import zlib as z
+from datetime import datetime
 from functools import partial
 
 def unsortedMap(filename):
+    start=datetime.now()
     lines=[]
     allWords=[]
     words={}
@@ -23,6 +25,7 @@ def unsortedMap(filename):
             for word in allWords:
                 words.update({word:words.setdefault(word,1)})
         '''
+    print(f'Mapping took {datetime.now()-start}----------------------\n')
     return list(filter(None,allWords))
 
 def hashUM(filename):
@@ -32,6 +35,7 @@ def hashUM(filename):
         sys.stderr.write(f'{mkdir.stderr}')
         raise
     try:
+        start=datetime.now()
         with open(filename, 'r') as file:
             lines=file.read().splitlines()
             hashes=[]
@@ -42,27 +46,29 @@ def hashUM(filename):
                     hashFile.close()
                 hashes.append(hashed)
         file.close()
+        print(f'Hashing Maps took {datetime.now()-start}----------------------\n')
         return hashes
     except:
         sys.stderr.write("Open failed")
 
 def __sendShuffle(address,toDeploy):
     try: 
-        print(f'Address= {address}; Shuffle= {toDeploy}')
+        #print(f'Address= {address}; Shuffle= {toDeploy}')
         yourName="mgardette"
-        mkdir = subprocess.run([f'ssh {yourName}@{address.strip()} \"mkdir -p /tmp/{yourName}/shufflesreceived/\"'],encoding="UTF-8",timeout=10,capture_output=True,shell=True)
+        mkdir = subprocess.run([f'ssh {yourName}@{address.strip()} \"mkdir -p /tmp/{yourName}/shufflesreceived/\"'],encoding="UTF-8",timeout=100,capture_output=True,shell=True)
     except:
         sys.stderr.write(f'{mkdir.stderr}') 
         raise 
     try:
-        process= subprocess.run([f'scp -o StrictHostKeyChecking=no -r -p {toDeploy} {yourName}@{address}:/tmp/{yourName}/shufflesreceived'],encoding="UTF-8",timeout=10,capture_output=True,shell=True)
-        sys.stdout.write(f'{process.stdout} sent to {address}\n')
+        process= subprocess.run([f'scp -o StrictHostKeyChecking=no -r -p {toDeploy} {yourName}@{address}:/tmp/{yourName}/shufflesreceived'],encoding="UTF-8",timeout=1000,capture_output=True,shell=True)
+        sys.stdout.write(process.stdout)#sys.stdout.write(f'{process.stdout} sent to {address}\n')
     except:
         sys.stderr.write(f'Could not send to {process.stderr}\n')
         raise
 
 def sendShuffles(machineFile):
     with open(machineFile, 'r') as machines:
+        start=datetime.now()
         lines=machines.read().splitlines()
         try:
             files = os.listdir('/tmp/mgardette/shuffles')
@@ -73,6 +79,8 @@ def sendShuffles(machineFile):
         for file in files:
             addresse=lines[int(hash(str(file).strip(f'-{pt.uname().node}')))%len(lines)]
             __sendShuffle(addresse,f'/tmp/mgardette/shuffles/{file}')
+        machines.close()
+    sys.stdout.write(f'Sending shuffle took {datetime.now()-start}----------------------\n')
 
 def __reduceShuffle (file):
     cpt=0
@@ -85,10 +93,9 @@ def __reduceShuffle (file):
     redFile=file.split('-',maxsplit=1)[0]
     with open(f'/tmp/mgardette/reduces/{redFile}','w+') as reduce:
         lines=reduce.readlines()
-        print(lines)
     reduce.close()
     if len(lines)!=0:
-        print(int(lines[0].split(' ',maxsplit=1)[1]))
+        sys.stdout.write(int(lines[0].split(' ',maxsplit=1)[1]))
         cpt+=int(lines[0].split(' ',maxsplit=1)[1])
     with open(f'/tmp/mgardette/reduces/{redFile}','w') as reduce:
         reduce.write(f'{text} {cpt}\n')
@@ -104,12 +111,13 @@ def reduceShuffles():
         sys.stderr.write(f'{mkdir.stderr}') 
         raise
     try:
+        start=datetime.now()
         files = os.listdir('/tmp/mgardette/shufflesreceived')
-        [__reduceShuffle(file) for file in files]
+        #[__reduceShuffle(file) for file in files]
     except:
         sys.stderr.write('Could not open received shuffles folder')
         raise
-    
+    sys.stdout.write(f'Reduce took {datetime.now()-start}----------------------\n')
 
     '''
     try:
@@ -136,7 +144,7 @@ def main():
                 um=unsortedMap(sys.argv[2])
                 for item in um:
                     umFile.writelines(f'{item} 1\n')
-                sys.stdout.write(f'Successfully created {umFile.name}')
+                #sys.stdout.write(f'Successfully created {umFile.name}')
             except:
                 sys.stderr.write("UMsort failed")
             #Je réserve pour le reduce
