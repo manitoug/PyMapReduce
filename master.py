@@ -34,6 +34,15 @@ def executeReduce(address):
         sys.stderr.write(f'Erreur {address}: {process.stderr}\n')
             #except
 
+def shuffle_async(ipSent):
+    with mp.Pool(5) as p:
+        shuffling=p.map_async(executeShuffle,ipSent,callback=reduce_async(ipSent))
+        print(shuffling.get())
+
+def reduce_async(ipSent):
+    with mp.Pool(5) as p:
+        reducing=p.map_async(executeReduce,ipSent)
+        print(reducing.get())
 
 def main():
     #print(dp.getValidIps('src/available_ips'))
@@ -53,9 +62,9 @@ def main():
     dp.copyFiles('machines',ipSent)
 
     with mp.Pool(5) as p:
-        p.map(executeMap,ipSent)
-        p.map(executeShuffle,ipSent)
-        p.map(executeReduce,ipSent)
+        mapping=p.map_async(executeMap,ipSent,callback=shuffle_async(ipSent))
+        print(mapping.get())
+        
 
 if __name__ == "__main__":
     main()
